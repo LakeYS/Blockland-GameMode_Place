@@ -42,15 +42,6 @@ package Place
     return Parent::spawnPlayer(%player);
   }
 
-  // This function is called when save.bls is finished loading
-  function GameModeInitialResetCheck()
-  {
-    Parent::GameModeInitialResetCheck();
-
-    place_loop(); // Start the loop.
-    schedule(3000, 0, serverDirectSaveFileLoad, "Add-Ons/GameMode_Place/place_blank.bls", 3, "", 1); // Load the save.
-  }
-
   function destroyServer()
   {
     deleteVariables("$p_*"); // Delete variables on server shutdown.
@@ -72,7 +63,7 @@ package Place
           $p_timeout[%id] = 0;
           setMutualBrickGroupTrust(50, %id, 2);
         }
-        else
+        else if(isObject(%client.player))
           %client.bottomPrint(getSubStr( getTimeString( $Pref::Server::PlaceTimer - (%time - $p_sprayTime[%id]) ),0,4 ), 2, 1);
       }
     }
@@ -87,3 +78,6 @@ package Place
   }
 };
 activatePackage("Place");
+
+schedule(10000, 0, serverDirectSaveFileLoad, "Add-Ons/GameMode_Place/place_blank.bls", 3, "", 1); // Load the save.
+place_loop(); // Start the loop.
