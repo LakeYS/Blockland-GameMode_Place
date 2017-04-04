@@ -1,4 +1,5 @@
 $Pref::Server::PlaceTimer = 25;
+$PlaceVer = 0.1;
 
 deactivatePackage("Place");
 package Place
@@ -29,6 +30,8 @@ package Place
     $p_sprayTime[%id] = getRealTime()/1000;
     $p_sprayCount[%id]++;
 
+    $PlaceActive = 1;
+
     %groupA.client.canUndo = 1; // Allow them to use ctrl+z.
 
     // Set brick attributes
@@ -47,16 +50,25 @@ package Place
 
   function destroyServer()
   {
+    echo("Exporting GameMode_Place stats");
+    export("$p_*","config/server/placeStats.cs");
+
+    $PlaceLoaded = 0;
     deleteVariables("$p_*"); // Delete variables on server shutdown.
+
+    Parent::destroyServer();
   }
 
   function serverCmdUndoBrick(%client)
   {
+    // Note: Doesn't roll ID back.
     if(%client.canUndo)
     {
       setMutualBrickGroupTrust(50, %client.bl_id, 2);
       Parent::serverCmdUndoBrick(%client);
       setMutualBrickGroupTrust(50, %client.bl_id, 0);
+
+      $PlaceActive = 1;
 
       %client.canUndo = 0;
       $p_sprayTime[%client.bl_id] = 1; // Reset the timer
@@ -83,6 +95,25 @@ package Place
   function rainbowPaintProjectile::onCollision() { }
   function stablePaintProjectile::onCollision() { }
   function jelloPaintProjectile::onCollision() { }
+
+  // # Save Loop
+  function place_export_loop()
+  {
+    if($PlaceActive) // Only export if active.
+    {
+      echo("Exporting GameMode_Place stats");
+      export("$p_*","config/server/placeStats.cs");
+      $PlaceActive = 0;
+    }
+
+    if(isEventPending($p_loopSave))
+    {
+      error("GameMode_Place - Duplicate loop! Cancelling...");
+      cancel($p_loopSave);
+    }
+
+    $p_loopSave = schedule(600000,0,place_export_loop); // Every 10min
+  }
 
   // # Main Loop
   function place_loop()
@@ -117,5 +148,15 @@ package Place
 };
 activatePackage("Place");
 
-schedule(10000, 0, serverDirectSaveFileLoad, "Add-Ons/GameMode_Place/place_blank.bls", 3, "", 1); // Load the save.
-place_loop(); // Start the loop.
+if(!$PlaceLoaded)
+{
+  $PlaceLoaded = 1;
+
+  if(isFile("config/server/placeStats.cs"))
+    exec("config/server/placeStats.cs");
+
+  schedule(5000, 0, serverDirectSaveFileLoad, "Add-Ons/GameMode_Place/place_blank.bls", 3, "", 1); // Load the save.
+
+  place_loop(); // Start the loop.
+  $p_loopSave = schedule(600000,0,place_export_loop); // Start the export loop.
+}
