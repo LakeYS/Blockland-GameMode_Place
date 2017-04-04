@@ -1,4 +1,4 @@
-$Pref::Server::PlaceTimer = 30;
+$Pref::Server::PlaceTimer = 25;
 
 deactivatePackage("Place");
 package Place
@@ -73,6 +73,16 @@ package Place
     %player.client.centerPrint("Placed by:<br>" @ %name,3);
     Parent::onActivate(%brick, %player, %c, %d, %e);
   }
+
+  // # FX Can Projectiles
+  function pearlPaintProjectile::onCollision() { }
+  function chromePaintProjectile::onCollision() { }
+  function glowPaintProjectile::onCollision() { }
+  function blinkPaintProjectile::onCollision() { }
+  function swirlPaintProjectile::onCollision() { }
+  function rainbowPaintProjectile::onCollision() { }
+  function stablePaintProjectile::onCollision() { }
+  function jelloPaintProjectile::onCollision() { }
 
   // # Main Loop
   function place_loop()
