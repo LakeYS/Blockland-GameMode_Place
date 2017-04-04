@@ -63,4 +63,4 @@ $MiniGame::StartEquipName4 0
 
 
 //config settings
-$Server::WelcomeMessage \c2Welcome to the place, %1. Use your paint can to make art!
+$Server::WelcomeMessage \c2Welcome to the canvas, %1. Use your paint can to make art! Ctrl+Z to undo.

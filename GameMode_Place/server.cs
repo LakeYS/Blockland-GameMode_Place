@@ -1,4 +1,4 @@
-$Pref::Server::PlaceTimer = 60;
+$Pref::Server::PlaceTimer = 30;
 
 deactivatePackage("Place");
 package Place
@@ -29,22 +29,49 @@ package Place
     $p_sprayTime[%id] = getRealTime()/1000;
     $p_sprayCount[%id]++;
 
+    %groupA.client.canUndo = 1; // Allow them to use ctrl+z.
+
     // Set brick attributes
     %b.setName(" " @ %id); // Set the brick's name to the sprayer's ID.
   }
 
   function GameConnection::spawnPlayer(%player)
   {
-    echo("client entered game, applying trust");
     if(!$p_timeout[%player.bl_id])
       schedule(3000, 0, setMutualBrickGroupTrust, 50, %player.bl_id, 2);
 
     return Parent::spawnPlayer(%player);
   }
 
+  //function GameModeInitialResetCheck()
+
   function destroyServer()
   {
     deleteVariables("$p_*"); // Delete variables on server shutdown.
+  }
+
+  function serverCmdUndoBrick(%client)
+  {
+    if(%client.canUndo)
+    {
+      setMutualBrickGroupTrust(50, %client.bl_id, 2);
+      Parent::serverCmdUndoBrick(%client);
+      setMutualBrickGroupTrust(50, %client.bl_id, 0);
+
+      %client.canUndo = 0;
+      $p_sprayTime[%client.bl_id] = 1; // Reset the timer
+    }
+  }
+
+  function fxDTSBrick::onActivate(%brick, %player, %c, %d, %e)
+  {
+    %name = %brick.getName();
+    if(%name $= "")
+      %name = "None";
+
+
+    %player.client.centerPrint("Placed by:<br>" @ %name,3);
+    Parent::onActivate(%brick, %player, %c, %d, %e);
   }
 
   // # Main Loop
@@ -60,6 +87,7 @@ package Place
       {
         if(%time >= $p_sprayTime[%id]+$Pref::Server::PlaceTimer)
         {
+          %client.canUndo = 0;
           $p_timeout[%id] = 0;
           setMutualBrickGroupTrust(50, %id, 2);
         }
