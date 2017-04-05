@@ -1,4 +1,4 @@
-$Pref::Server::PlaceTimer = 25;
+$Pref::Server::PlaceTimer = 20;
 $PlaceVer = 0.1;
 
 deactivatePackage("Place");
@@ -14,18 +14,19 @@ package Place
 
   function PaintProjectile::onCollision(%datablock, %a, %b, %c, %d, %e)
   {
-    Parent::onCollision(%datablock, %a, %b, %c, %d, %e);
-
     %groupA = getBrickGroupFromObject(%a); // Projectile
     %groupB = getBrickGroupFromObject(%B); // Brick
     %id = %groupA.client.bl_id;
 
-    if($p_timeout[%id] || %groupB.potentialTrust[%id] != 2)
+    if($p_timeout[%id])
       return;
 
-    // Set trust to 0 and set the timer.
-    // Timing is stored globally instead of on client so it persists when they leave.
+    // For security purposes, the actual trust is only sent when the color is applied.
+    setMutualBrickGroupTrust(50, %id, 2);
+    Parent::onCollision(%datablock, %a, %b, %c, %d, %e);
     setMutualBrickGroupTrust(50, %id, 0);
+
+    // Timing is stored globally instead of on client so it persists when they leave.
     $p_timeout[%id] = 1;
     $p_sprayTime[%id] = getRealTime()/1000;
     $p_sprayCount[%id]++;
@@ -35,33 +36,25 @@ package Place
     %groupA.client.canUndo = 1; // Allow them to use ctrl+z.
 
     // Set brick attributes
-    %b.setName(" " @ %id); // Set the brick's name to the sprayer's ID.
-  }
-
-  function GameConnection::spawnPlayer(%player)
-  {
-    if(!$p_timeout[%player.bl_id])
-      schedule(3000, 0, setMutualBrickGroupTrust, 50, %player.bl_id, 2);
-
-    return Parent::spawnPlayer(%player);
+    %b.setNTObjectName(%id); // Set the brick's name to the sprayer's ID.
   }
 
   //function GameModeInitialResetCheck()
 
   function destroyServer()
   {
-    echo("Exporting GameMode_Place stats");
+    Parent::destroyServer();
+
+    echo("Exporting place stats");
     export("$p_*","config/server/placeStats.cs");
 
     $PlaceLoaded = 0;
     deleteVariables("$p_*"); // Delete variables on server shutdown.
-
-    Parent::destroyServer();
   }
 
   function serverCmdUndoBrick(%client)
   {
-    // Note: Doesn't roll ID back.
+    // Note: Doesn't roll brick name back.
     if(%client.canUndo)
     {
       setMutualBrickGroupTrust(50, %client.bl_id, 2);
@@ -78,6 +71,8 @@ package Place
   function fxDTSBrick::onActivate(%brick, %player, %c, %d, %e)
   {
     %name = %brick.getName();
+    %name = getSubStr(%name,1,strlen(%name)+1);
+
     if(%name $= "")
       %name = "None";
 
@@ -101,7 +96,7 @@ package Place
   {
     if($PlaceActive) // Only export if active.
     {
-      echo("Exporting GameMode_Place stats");
+      echo("Exporting place stats");
       export("$p_*","config/server/placeStats.cs");
       $PlaceActive = 0;
     }
@@ -151,6 +146,10 @@ activatePackage("Place");
 if(!$PlaceLoaded)
 {
   $PlaceLoaded = 1;
+
+  // Load optional add-on: autosaver
+  if(isFile("Add-Ons/Support_AutoSaver/server.cs"))
+    exec("Add-Ons/Support_AutoSaver/server.cs");
 
   if(isFile("config/server/placeStats.cs"))
     exec("config/server/placeStats.cs");
