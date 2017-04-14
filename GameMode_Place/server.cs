@@ -154,7 +154,7 @@ if(!$PlaceLoaded)
   if(isFile("config/server/placeStats.cs"))
     exec("config/server/placeStats.cs");
 
-  schedule(5000, 0, serverDirectSaveFileLoad, "Add-Ons/GameMode_Place/place_blank.bls", 3, "", 1); // Load the save.
+  schedule(10000, 0, serverDirectSaveFileLoad, "Add-Ons/GameMode_Place/place_blank.bls", 3, "", 1); // Load the save.
 
   place_loop(); // Start the loop.
   $p_loopSave = schedule(600000,0,place_export_loop); // Start the export loop.
